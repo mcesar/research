@@ -164,10 +164,15 @@ func main() {
 	for _, commit := range commits {
 		commit.files = []string{}
 		for _, uuid := range commit.uuids {
-			out, err := exec.Command(
-				"lscm", "list", "changes", "-r siop", fmt.Sprintf("%v", uuid), "-j").Output()
+			cmd := exec.Command(
+				"lscm", "list", "changes", "-r siop", fmt.Sprintf("%v", uuid), "-j")
+			err := cmd.Run()
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal(err, err.(*exec.Error).Error())
+			}
+			out, err := cmd.Output()
+			if err != nil {
+				log.Fatal(err, err.(*exec.Error).Error())
 			}
 			change := &change{}
 			err = json.Unmarshal(out, change)
