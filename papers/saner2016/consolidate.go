@@ -166,7 +166,7 @@ func main() {
 		for _, uuid := range commit.uuids {
 			cmd := exec.Command(
 				"lscm", "list", "changes", "-r siop", fmt.Sprintf("%v", uuid), "-j")
-			out, err := cmd.Output()
+			out, err := cmd.CombinedOutput()
 			if err != nil {
 				log.Fatal(err, string(out))
 			}
