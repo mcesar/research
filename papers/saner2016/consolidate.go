@@ -17,13 +17,10 @@ type issue struct {
 }
 
 type commit struct {
-	uuids   []string
-	comment string
-	user    string
-	time    string
-	feature string
-	issue   issue
-	files   []string
+	Feature string
+	Issue   issue
+	Change  *change
+	Files   []string
 }
 
 type changeset struct {
@@ -103,7 +100,7 @@ func main() {
 		stories.Close()
 		features.Close()
 	}()
-	unpackChangeset := func(dc string) ([]string, string, string, string, string) {
+	lookupChangeset := func(dc string) (*change, string) {
 		arr := strings.Split(dc, " - ")
 		comm := ""
 		for i := 1; i < len(arr)-2; i++ {
@@ -125,7 +122,7 @@ func main() {
 		if c == nil {
 			log.Fatal("Key not found: ", key)
 		}
-		return c.uuids, comm, author, time, key
+		return c, key
 	}
 	storiesMap := map[string]string{}
 	commits := map[string]*commit{}
@@ -133,14 +130,11 @@ func main() {
 	read(r, func(record []string) {
 		defectChangesets := strings.Split(record[4], "\n")
 		for _, dc := range defectChangesets {
-			uuids, comm, author, time, key := unpackChangeset(dc)
+			cs, key := lookupChangeset(dc)
 			commits[key] = &commit{
-				uuids:   uuids,
-				comment: comm,
-				user:    author,
-				time:    time,
-				issue:   issue{record[1], "bug"},
-				feature: strings.Split(record[3], ":")[0]}
+				Change:  cs,
+				Issue:   issue{record[1], "bug"},
+				Feature: strings.Split(record[3], ":")[0]}
 		}
 	})
 	r = csv.NewReader(features)
@@ -151,19 +145,17 @@ func main() {
 	read(r, func(record []string) {
 		defectChangesets := strings.Split(record[9], "\n")
 		for _, dc := range defectChangesets {
-			uuids, comm, author, time, key := unpackChangeset(dc)
+			cs, key := lookupChangeset(dc)
 			commits[key] = &commit{
-				uuids:   uuids,
-				comment: comm,
-				user:    author,
-				time:    time,
-				issue:   issue{record[8][1:], "story"},
-				feature: storiesMap[record[8][1:]]}
+				Change:  cs,
+				Issue:   issue{record[8][1:], "story"},
+				Feature: storiesMap[record[8][1:]]}
 		}
 	})
+	result := make([]*commit, 0, len(commits))
 	for _, commit := range commits {
-		commit.files = []string{}
-		for _, uuid := range commit.uuids {
+		commit.Files = []string{}
+		for _, uuid := range commit.Change.uuids {
 			cmd := exec.Command(
 				"lscm", "list", "changes", "-r", "siop", fmt.Sprintf("%v", uuid), "-j")
 			out, err := cmd.CombinedOutput()
@@ -176,11 +168,12 @@ func main() {
 				log.Fatal(err)
 			}
 			for _, f := range change.Changes {
-				commit.files = append(commit.files, f.Path)
+				commit.Files = append(commit.Files, f.Path)
 			}
 		}
+		result = append(result, commit)
 	}
-	json.NewEncoder(os.Stdout).Encode(commits)
+	json.NewEncoder(os.Stdout).Encode(result)
 }
 
 func open(file string) *os.File {
