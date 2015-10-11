@@ -164,8 +164,8 @@ func main() {
 	for _, commit := range commits {
 		commit.files = []string{}
 		for _, uuid := range commit.uuids {
-			command := fmt.Sprintf("lscm list changes -r siop %v -j", uuid)
-			out, err := exec.Command(command).Output()
+			out, err := exec.Command(
+				"lscm", "list", "changes", "-r siop", fmt.Sprintf("%v", uuid), "-j").Output()
 			if err != nil {
 				log.Fatal(err)
 			}
