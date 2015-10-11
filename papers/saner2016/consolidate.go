@@ -166,17 +166,9 @@ func main() {
 		for _, uuid := range commit.uuids {
 			cmd := exec.Command(
 				"lscm", "list", "changes", "-r siop", fmt.Sprintf("%v", uuid), "-j")
-			err := cmd.Run()
-			if err != nil {
-				if _, ok := err.(*exec.ExitError); ok {
-					log.Fatal(err, err.(*exec.ExitError).Error())
-				} else {
-					log.Fatal(err, err.(*exec.Error).Error())
-				}
-			}
 			out, err := cmd.Output()
 			if err != nil {
-				log.Fatal(err, err.(*exec.Error).Error())
+				log.Fatal(err, string(out))
 			}
 			change := &change{}
 			err = json.Unmarshal(out, change)
