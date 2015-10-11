@@ -168,7 +168,11 @@ func main() {
 				"lscm", "list", "changes", "-r siop", fmt.Sprintf("%v", uuid), "-j")
 			err := cmd.Run()
 			if err != nil {
-				log.Fatal(err, err.(*exec.Error).Error())
+				if _, ok := err.(*exec.ExitError); ok {
+					log.Fatal(err, err.(*exec.ExitError).Error())
+				} else {
+					log.Fatal(err, err.(*exec.Error).Error())
+				}
 			}
 			out, err := cmd.Output()
 			if err != nil {
