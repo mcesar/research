@@ -10,35 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"../../structs"
 )
-
-type issue struct {
-	Id, Kind string
-}
-
-type commit struct {
-	Feature string
-	Issue   issue
-	Change  *change
-	Files   []string
-}
-
-type changeset struct {
-	Changes []change `json:changes`
-}
-
-type change struct {
-	Author   string `json:author`
-	Comment  string `json:comment`
-	Modified string `json:Modified`
-	Uuid     string `json:uuid`
-	Changes  []file `json:changes`
-	uuids    []string
-}
-
-type file struct {
-	Path string `json:path`
-}
 
 func main() {
 	folder := open(os.Args[1])
@@ -47,7 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error reading file names from ", os.Args[1], err)
 	}
-	changesets := map[string]*change{}
+	changesets := map[string]*structs.Change{}
 	months := map[string]string{"jan": "01", "fev": "02", "mar": "03", "abr": "04", "mai": "05",
 		"jun": "06", "jul": "07", "ago": "08", "set": "09", "out": "10", "nov": "11", "dez": "12"}
 	hours := map[string]string{"01": "13", "02": "14", "03": "15", "04": "16", "05": "17",
@@ -57,7 +31,7 @@ func main() {
 			continue
 		}
 		j := open(filepath.Join(os.Args[1], fileName))
-		cc := &changeset{}
+		cc := &structs.Changeset{}
 		err = json.NewDecoder(j).Decode(&cc)
 		if err != nil {
 			log.Fatal("Error decoding file ", fileName, " ", err)
@@ -86,13 +60,13 @@ func main() {
 			}
 			key := strings.ToLower(fmt.Sprintf("%v - %v - %v", comm, c.Author, modified))
 			if _, ok := changesets[key]; ok {
-				changesets[key].uuids = append(changesets[key].uuids, c.Uuid)
+				changesets[key].Uuids = append(changesets[key].Uuids, c.Uuid)
 			} else {
-				changesets[key] = &change{
+				changesets[key] = &structs.Change{
 					Author:   c.Author,
 					Comment:  comm,
 					Modified: modified,
-					uuids:    []string{c.Uuid}}
+					Uuids:    []string{c.Uuid}}
 			}
 		}
 	}
@@ -104,7 +78,7 @@ func main() {
 		stories.Close()
 		features.Close()
 	}()
-	lookupChangeset := func(dc string) (*change, string) {
+	lookupChangeset := func(dc string) (*structs.Change, string) {
 		arr := strings.Split(dc, " - ")
 		comm := ""
 		for i := 1; i < len(arr)-2; i++ {
@@ -129,15 +103,15 @@ func main() {
 		return c, key
 	}
 	storiesMap := map[string]string{}
-	commits := map[string]*commit{}
+	commits := map[string]*structs.Commit{}
 	r := csv.NewReader(defects)
 	read(r, func(record []string) {
 		defectChangesets := strings.Split(record[4], "\n")
 		for _, dc := range defectChangesets {
 			cs, key := lookupChangeset(dc)
-			commits[key] = &commit{
+			commits[key] = &structs.Commit{
 				Change:  cs,
-				Issue:   issue{record[1], "bug"},
+				Issue:   structs.Issue{record[1], "bug"},
 				Feature: strings.Split(record[3], ":")[0]}
 		}
 	})
@@ -150,23 +124,23 @@ func main() {
 		defectChangesets := strings.Split(record[9], "\n")
 		for _, dc := range defectChangesets {
 			cs, key := lookupChangeset(dc)
-			commits[key] = &commit{
+			commits[key] = &structs.Commit{
 				Change:  cs,
-				Issue:   issue{record[8][1:], "story"},
+				Issue:   structs.Issue{record[8][1:], "story"},
 				Feature: storiesMap[record[8][1:]]}
 		}
 	})
-	result := make([]*commit, 0, len(commits))
+	result := make([]*structs.Commit, 0, len(commits))
 	for _, commit := range commits {
 		commit.Files = []string{}
-		for _, uuid := range commit.Change.uuids {
+		for _, uuid := range commit.Change.Uuids {
 			cmd := exec.Command(
 				"lscm", "list", "changes", "-r", "siop", uuid, "-j")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				log.Fatal(err, string(out))
 			}
-			change := &changeset{}
+			change := &structs.Changeset{}
 			err = json.Unmarshal(out, change)
 			if err != nil {
 				log.Fatal(err)
