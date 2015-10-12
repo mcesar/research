@@ -173,14 +173,13 @@ func main() {
 			}
 			for _, c := range change.Changes {
 				for _, f := range c.Changes {
-					fmt.Println(f.Path, uuid)
 					commit.Files = append(commit.Files, f.Path)
 				}
 			}
 		}
 		result = append(result, commit)
 	}
-	//json.NewEncoder(os.Stdout).Encode(result)
+	json.NewEncoder(os.Stdout).Encode(result)
 }
 
 func open(file string) *os.File {
