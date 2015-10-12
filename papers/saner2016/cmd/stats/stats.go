@@ -11,18 +11,23 @@ import (
 )
 
 type stats struct {
-	Commits           int
-	Features          int
-	Issues            int
-	Files             map[string]int
-	LayersPerCommit   map[int]int
-	UsersPerIssue     map[int]int
-	CommitsPerIssue   map[int]int
-	LayersPerIssue    map[int]int
-	UsersPerFeature   map[int]int
-	CommitsPerFeature map[int]int
-	LayersPerFeature  map[int]int
-	IssuesPerFeature  map[int]int
+	Commits            int
+	Features           int
+	Features3          int
+	Issues             int
+	Files              map[string]int
+	LayersPerCommit    map[int]int
+	UsersPerIssue      map[int]int
+	CommitsPerIssue    map[int]int
+	LayersPerIssue     map[int]int
+	UsersPerFeature    map[int]int
+	CommitsPerFeature  map[int]int
+	LayersPerFeature   map[int]int
+	IssuesPerFeature   map[int]int
+	UsersPerFeature3   map[int]int
+	CommitsPerFeature3 map[int]int
+	LayersPerFeature3  map[int]int
+	IssuesPerFeature3  map[int]int
 }
 
 type issue struct {
@@ -33,6 +38,7 @@ type issue struct {
 
 type feature struct {
 	commits int
+	files   int
 	issues  map[string]int
 	layers  map[string]int
 	users   map[string]int
@@ -46,16 +52,20 @@ func main() {
 	commits := []*structs.Commit{}
 	json.NewDecoder(file).Decode(&commits)
 	stats := stats{
-		Commits:           len(commits),
-		Files:             map[string]int{},
-		LayersPerCommit:   map[int]int{},
-		UsersPerIssue:     map[int]int{},
-		CommitsPerIssue:   map[int]int{},
-		LayersPerIssue:    map[int]int{},
-		UsersPerFeature:   map[int]int{},
-		CommitsPerFeature: map[int]int{},
-		LayersPerFeature:  map[int]int{},
-		IssuesPerFeature:  map[int]int{}}
+		Commits:            len(commits),
+		Files:              map[string]int{},
+		LayersPerCommit:    map[int]int{},
+		UsersPerIssue:      map[int]int{},
+		CommitsPerIssue:    map[int]int{},
+		LayersPerIssue:     map[int]int{},
+		UsersPerFeature:    map[int]int{},
+		CommitsPerFeature:  map[int]int{},
+		LayersPerFeature:   map[int]int{},
+		IssuesPerFeature:   map[int]int{},
+		UsersPerFeature3:   map[int]int{},
+		CommitsPerFeature3: map[int]int{},
+		LayersPerFeature3:  map[int]int{},
+		IssuesPerFeature3:  map[int]int{}}
 	features := map[string]*feature{}
 	issues := map[string]*issue{}
 	for _, commit := range commits {
@@ -76,11 +86,14 @@ func main() {
 		features[commit.Feature].users[commit.Change.Author] = 0
 		issues[commit.Issue.Id].users[commit.Change.Author] = 0
 		layers := map[string]int{}
+		count := 0
 		for _, file := range commit.Files {
 			layer := strings.Split(file, "/")[1]
 			if layer == "siop-jpa" || layer == "siop-ejb" || layer == "siop-war" {
+				count++
 				layers[layer] = 0
 				features[commit.Feature].layers[layer] = 0
+				features[commit.Feature].files += 1
 				issues[commit.Issue.Id].layers[layer] = 0
 				if n, ok := stats.Files[layer]; ok {
 					stats.Files[layer] = n + 1
@@ -91,11 +104,19 @@ func main() {
 		}
 		increment(stats.LayersPerCommit, len(layers))
 	}
+	features3 := 0
 	for _, f := range features {
 		increment(stats.CommitsPerFeature, f.commits)
 		increment(stats.UsersPerFeature, len(f.users))
 		increment(stats.LayersPerFeature, len(f.layers))
 		increment(stats.IssuesPerFeature, len(f.issues))
+		if f.files >= 3 {
+			features3++
+			increment(stats.CommitsPerFeature3, f.commits)
+			increment(stats.UsersPerFeature3, len(f.users))
+			increment(stats.LayersPerFeature3, len(f.layers))
+			increment(stats.IssuesPerFeature3, len(f.issues))
+		}
 	}
 	for _, i := range issues {
 		increment(stats.CommitsPerIssue, i.commits)
@@ -103,6 +124,7 @@ func main() {
 		increment(stats.LayersPerIssue, len(i.layers))
 	}
 	stats.Features = len(features)
+	stats.Features3 = features3
 	stats.Issues = len(issues)
 	fmt.Printf("%#v\n", stats)
 }
