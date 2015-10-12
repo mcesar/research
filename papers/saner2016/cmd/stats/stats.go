@@ -12,27 +12,28 @@ import (
 )
 
 type stats struct {
-	Commits            int
-	Features           int
-	Features3          int
-	Issues             int
-	Issues3            int
-	Files              map[string]int
-	LayersPerCommit    map[int]int
-	UsersPerIssue      map[int]int
-	CommitsPerIssue    map[int]int
-	LayersPerIssue     map[int]int
-	UsersPerIssue3     map[int]int
-	CommitsPerIssue3   map[int]int
-	LayersPerIssue3    map[int]int
-	UsersPerFeature    map[int]int
-	CommitsPerFeature  map[int]int
-	LayersPerFeature   map[int]int
-	IssuesPerFeature   map[int]int
-	UsersPerFeature3   map[int]int
-	CommitsPerFeature3 map[int]int
-	LayersPerFeature3  map[int]int
-	IssuesPerFeature3  map[int]int
+	Commits                    int
+	Features                   int
+	Features3                  int
+	Issues                     int
+	Issues3                    int
+	Files                      map[string]int
+	CommitsPerLayerCombination map[string]int
+	LayersPerCommit            map[int]int
+	UsersPerIssue              map[int]int
+	CommitsPerIssue            map[int]int
+	LayersPerIssue             map[int]int
+	UsersPerIssue3             map[int]int
+	CommitsPerIssue3           map[int]int
+	LayersPerIssue3            map[int]int
+	UsersPerFeature            map[int]int
+	CommitsPerFeature          map[int]int
+	LayersPerFeature           map[int]int
+	IssuesPerFeature           map[int]int
+	UsersPerFeature3           map[int]int
+	CommitsPerFeature3         map[int]int
+	LayersPerFeature3          map[int]int
+	IssuesPerFeature3          map[int]int
 }
 
 type issue struct {
@@ -60,23 +61,24 @@ func main() {
 	commits := []*structs.Commit{}
 	json.NewDecoder(file).Decode(&commits)
 	stats := stats{
-		Commits:            0,
-		Files:              map[string]int{},
-		LayersPerCommit:    map[int]int{},
-		UsersPerIssue:      map[int]int{},
-		CommitsPerIssue:    map[int]int{},
-		LayersPerIssue:     map[int]int{},
-		UsersPerIssue3:     map[int]int{},
-		CommitsPerIssue3:   map[int]int{},
-		LayersPerIssue3:    map[int]int{},
-		UsersPerFeature:    map[int]int{},
-		CommitsPerFeature:  map[int]int{},
-		LayersPerFeature:   map[int]int{},
-		IssuesPerFeature:   map[int]int{},
-		UsersPerFeature3:   map[int]int{},
-		CommitsPerFeature3: map[int]int{},
-		LayersPerFeature3:  map[int]int{},
-		IssuesPerFeature3:  map[int]int{}}
+		Commits: 0,
+		Files:   map[string]int{},
+		CommitsPerLayerCombination: map[string]int{},
+		LayersPerCommit:            map[int]int{},
+		UsersPerIssue:              map[int]int{},
+		CommitsPerIssue:            map[int]int{},
+		LayersPerIssue:             map[int]int{},
+		UsersPerIssue3:             map[int]int{},
+		CommitsPerIssue3:           map[int]int{},
+		LayersPerIssue3:            map[int]int{},
+		UsersPerFeature:            map[int]int{},
+		CommitsPerFeature:          map[int]int{},
+		LayersPerFeature:           map[int]int{},
+		IssuesPerFeature:           map[int]int{},
+		UsersPerFeature3:           map[int]int{},
+		CommitsPerFeature3:         map[int]int{},
+		LayersPerFeature3:          map[int]int{},
+		IssuesPerFeature3:          map[int]int{}}
 	features := map[string]*feature{}
 	issues := map[string]*issue{}
 	for _, commit := range commits {
@@ -111,14 +113,11 @@ func main() {
 				features[commit.Feature].files += 1
 				issues[commit.Issue.Id].layers[layer] = 0
 				issues[commit.Issue.Id].files += 1
-				if n, ok := stats.Files[layer]; ok {
-					stats.Files[layer] = n + 1
-				} else {
-					stats.Files[layer] = 1
-				}
+				incrementS(stats.Files, layer)
 			}
 		}
 		increment(stats.LayersPerCommit, len(layers))
+		incrementS(stats.CommitsPerLayerCombination, combination(layers))
 	}
 	features3 := 0
 	issues3 := 0
@@ -159,4 +158,40 @@ func increment(m map[int]int, key int) {
 	} else {
 		m[key] = 1
 	}
+}
+
+func incrementS(m map[string]int, key string) {
+	if n, ok := m[key]; ok {
+		m[key] = n + 1
+	} else {
+		m[key] = 1
+	}
+}
+
+func combination(layers map[string]int) string {
+	_, m := layers["siop-jpa"]
+	_, v := layers["siop-war"]
+	_, c := layers["siop-ejb"]
+	if m && v && c {
+		return "mvc"
+	}
+	if m && v {
+		return "mv"
+	}
+	if m && c {
+		return "mc"
+	}
+	if v && c {
+		return "vc"
+	}
+	if m {
+		return "m"
+	}
+	if v {
+		return "v"
+	}
+	if c {
+		return "c"
+	}
+	return ""
 }
