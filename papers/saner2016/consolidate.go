@@ -166,14 +166,16 @@ func main() {
 			if err != nil {
 				log.Fatal(err, string(out))
 			}
-			change := &change{}
+			change := &changeset{}
 			err = json.Unmarshal(out, change)
 			if err != nil {
 				log.Fatal(err)
 			}
-			for _, f := range change.Changes {
-				fmt.Println(f.Path, uuid)
-				commit.Files = append(commit.Files, f.Path)
+			for _, c := range change.Changes {
+				for _, f := range c.Changes {
+					fmt.Println(f.Path, uuid)
+					commit.Files = append(commit.Files, f.Path)
+				}
 			}
 		}
 		result = append(result, commit)
