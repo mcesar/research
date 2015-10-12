@@ -13,7 +13,7 @@ import (
 )
 
 type issue struct {
-	id, kind string
+	Id, Kind string
 }
 
 type commit struct {
@@ -88,7 +88,11 @@ func main() {
 			if _, ok := changesets[key]; ok {
 				changesets[key].uuids = append(changesets[key].uuids, c.Uuid)
 			} else {
-				changesets[key] = &change{uuids: []string{c.Uuid}}
+				changesets[key] = &change{
+					Author:   c.Author,
+					Comment:  comm,
+					Modified: modified,
+					uuids:    []string{c.Uuid}}
 			}
 		}
 	}
@@ -157,7 +161,7 @@ func main() {
 		commit.Files = []string{}
 		for _, uuid := range commit.Change.uuids {
 			cmd := exec.Command(
-				"lscm", "list", "changes", "-r", "siop", fmt.Sprintf("%v", uuid), "-j")
+				"lscm", "list", "changes", "-r", "siop", uuid, "-j")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				log.Fatal(err, string(out))
@@ -168,12 +172,13 @@ func main() {
 				log.Fatal(err)
 			}
 			for _, f := range change.Changes {
+				fmt.Println(f.Path, uuid)
 				commit.Files = append(commit.Files, f.Path)
 			}
 		}
 		result = append(result, commit)
 	}
-	json.NewEncoder(os.Stdout).Encode(result)
+	//json.NewEncoder(os.Stdout).Encode(result)
 }
 
 func open(file string) *os.File {
