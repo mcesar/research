@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"../../structs"
@@ -14,26 +15,17 @@ import (
 type stats struct {
 	Commits                    int
 	Features                   int
-	Features3                  int
 	Issues                     int
-	Issues3                    int
 	Files                      map[string]int
 	CommitsPerLayerCombination map[string]int
 	LayersPerCommit            map[int]int
 	UsersPerIssue              map[int]int
 	CommitsPerIssue            map[int]int
 	LayersPerIssue             map[int]int
-	UsersPerIssue3             map[int]int
-	CommitsPerIssue3           map[int]int
-	LayersPerIssue3            map[int]int
 	UsersPerFeature            map[int]int
 	CommitsPerFeature          map[int]int
 	LayersPerFeature           map[int]int
 	IssuesPerFeature           map[int]int
-	UsersPerFeature3           map[int]int
-	CommitsPerFeature3         map[int]int
-	LayersPerFeature3          map[int]int
-	IssuesPerFeature3          map[int]int
 }
 
 type issue struct {
@@ -53,6 +45,7 @@ type feature struct {
 
 func main() {
 	issueKind := flag.String("k", "", "issue kind")
+	minimumFileCount := flag.Int("n", 0, "minimum file count")
 	flag.Parse()
 	file, err := os.Open(os.Args[len(os.Args)-1])
 	if err != nil {
@@ -68,17 +61,10 @@ func main() {
 		UsersPerIssue:              map[int]int{},
 		CommitsPerIssue:            map[int]int{},
 		LayersPerIssue:             map[int]int{},
-		UsersPerIssue3:             map[int]int{},
-		CommitsPerIssue3:           map[int]int{},
-		LayersPerIssue3:            map[int]int{},
 		UsersPerFeature:            map[int]int{},
 		CommitsPerFeature:          map[int]int{},
 		LayersPerFeature:           map[int]int{},
-		IssuesPerFeature:           map[int]int{},
-		UsersPerFeature3:           map[int]int{},
-		CommitsPerFeature3:         map[int]int{},
-		LayersPerFeature3:          map[int]int{},
-		IssuesPerFeature3:          map[int]int{}}
+		IssuesPerFeature:           map[int]int{}}
 	features := map[string]*feature{}
 	issues := map[string]*issue{}
 	for _, commit := range commits {
@@ -119,37 +105,30 @@ func main() {
 		increment(stats.LayersPerCommit, len(layers))
 		incrementS(stats.CommitsPerLayerCombination, combination(layers))
 	}
-	features3 := 0
-	issues3 := 0
+	featuresCount := 0
+	issuesCount := 0
 	for _, f := range features {
-		increment(stats.CommitsPerFeature, f.commits)
-		increment(stats.UsersPerFeature, len(f.users))
-		increment(stats.LayersPerFeature, len(f.layers))
-		increment(stats.IssuesPerFeature, len(f.issues))
-		if f.files >= 3 {
-			features3++
-			increment(stats.CommitsPerFeature3, f.commits)
-			increment(stats.UsersPerFeature3, len(f.users))
-			increment(stats.LayersPerFeature3, len(f.layers))
-			increment(stats.IssuesPerFeature3, len(f.issues))
+		if *minimumFileCount == 0 || f.files >= *minimumFileCount {
+			featuresCount++
+			increment(stats.CommitsPerFeature, f.commits)
+			increment(stats.UsersPerFeature, len(f.users))
+			increment(stats.LayersPerFeature, len(f.layers))
+			increment(stats.IssuesPerFeature, len(f.issues))
 		}
 	}
 	for _, i := range issues {
-		increment(stats.CommitsPerIssue, i.commits)
-		increment(stats.UsersPerIssue, len(i.users))
-		increment(stats.LayersPerIssue, len(i.layers))
-		if i.files > 3 {
-			issues3++
-			increment(stats.CommitsPerIssue3, i.commits)
-			increment(stats.UsersPerIssue3, len(i.users))
-			increment(stats.LayersPerIssue3, len(i.layers))
+		if *minimumFileCount == 0 || i.files >= *minimumFileCount {
+			issuesCount++
+			increment(stats.CommitsPerIssue, i.commits)
+			increment(stats.UsersPerIssue, len(i.users))
+			increment(stats.LayersPerIssue, len(i.layers))
 		}
 	}
-	stats.Features = len(features)
-	stats.Features3 = features3
-	stats.Issues = len(issues)
-	stats.Issues3 = issues3
-	fmt.Printf("%#v\n", stats)
+	stats.Features = featuresCount
+	stats.Issues = issuesCount
+	out := fmt.Sprintf("%+v", stats)
+	re := regexp.MustCompile(" ([a-zA-Z]{4,}\\:)")
+	fmt.Println(re.ReplaceAllString(out, "\n$1 "))
 }
 
 func increment(m map[int]int, key int) {
