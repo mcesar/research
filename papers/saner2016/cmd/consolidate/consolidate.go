@@ -32,7 +32,7 @@ func main() {
 	hours := map[string]string{"01": "13", "02": "14", "03": "15", "04": "16", "05": "17",
 		"06": "18", "07": "19", "08": "20", "09": "21", "10": "22", "11": "23", "12": "12"}
 	for _, fileName := range fileNames {
-		if !strings.HasSuffix(fileName, ".json") {
+		if !strings.HasSuffix(fileName, ".json") || strings.HasSuffix(fileName, "commits.json") {
 			continue
 		}
 		j := open(filepath.Join(os.Args[1], fileName))
@@ -106,7 +106,6 @@ func main() {
 		key := strings.ToLower(fmt.Sprintf("%v - %v - %v", comm, author, time))
 		c := changesets[key]
 		if c == nil {
-			//fmt.Println(dc)
 			fmt.Fprintf(os.Stderr, "Key not found: %v\n", key)
 		}
 		return c, key
