@@ -176,6 +176,10 @@ func main() {
 	for _, commit := range commits {
 		commit.Files = []string{}
 		for _, uuid := range commit.Change.Uuids {
+			if uuid == "" {
+				fmt.Fprintf(os.Stderr, "empty uuid\n")
+				continue
+			}
 			cmd := exec.Command("lscm", "list", "changes", "-r", "siop", uuid, "-j")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
