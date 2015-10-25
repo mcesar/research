@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"../../structs"
@@ -22,8 +23,12 @@ func main() {
 		log.Fatal("Error reading file names from ", os.Args[1], err)
 	}
 	changesets := map[string]*structs.Change{}
+	changesetsByUuid := map[string]*structs.Change{}
 	months := map[string]string{"jan": "01", "fev": "02", "mar": "03", "abr": "04", "mai": "05",
 		"jun": "06", "jul": "07", "ago": "08", "set": "09", "out": "10", "nov": "11", "dez": "12"}
+	monthsInEnglish := map[string]string{"jan": "January", "fev": "February", "mar": "March",
+		"abr": "April", "mai": "May", "jun": "June", "jul": "July", "ago": "August",
+		"set": "September", "out": "October", "nov": "November", "dez": "December"}
 	hours := map[string]string{"01": "13", "02": "14", "03": "15", "04": "16", "05": "17",
 		"06": "18", "07": "19", "08": "20", "09": "21", "10": "22", "11": "23", "12": "12"}
 	for _, fileName := range fileNames {
@@ -40,7 +45,8 @@ func main() {
 			arr0 := strings.Split(c.Modified, " ")
 			arr1 := strings.Split(arr0[0], "-")
 			arr2 := strings.Split(arr0[1], ":")
-			if !strings.HasSuffix(fileName, arr1[1]+".json") {
+			if !strings.HasSuffix(fileName, arr1[1]+".json") &&
+				!strings.HasSuffix(fileName, monthsInEnglish[arr1[1]]+".json") {
 				continue
 			}
 			if arr0[2] == "PM" {
@@ -60,23 +66,29 @@ func main() {
 			}
 			key := strings.ToLower(fmt.Sprintf("%v - %v - %v", comm, c.Author, modified))
 			if _, ok := changesets[key]; ok {
-				changesets[key].Uuids = append(changesets[key].Uuids, c.Uuid)
+				change := changesets[key]
+				change.Uuids = append(change.Uuids, c.Uuid)
+				changesetsByUuid[change.Uuid] = change
 			} else {
-				changesets[key] = &structs.Change{
+				change := &structs.Change{
 					Author:   c.Author,
 					Comment:  comm,
 					Modified: modified,
 					Uuids:    []string{c.Uuid}}
+				changesets[key] = change
+				changesetsByUuid[c.Uuid] = change
 			}
 		}
 	}
 	defects := open(filepath.Join(os.Args[1], "defects.csv"))
 	stories := open(filepath.Join(os.Args[1], "stories.csv"))
 	features := open(filepath.Join(os.Args[1], "features.csv"))
+	issues := open(filepath.Join(os.Args[1], "siop-issues.csv"))
 	defer func() {
 		defects.Close()
 		stories.Close()
 		features.Close()
+		issues.Close()
 	}()
 	lookupChangeset := func(dc string) (*structs.Change, string) {
 		arr := strings.Split(dc, " - ")
@@ -113,6 +125,9 @@ func main() {
 				Change:  cs,
 				Issue:   structs.Issue{record[1], "bug"},
 				Feature: strings.Split(record[3], ":")[0]}
+			for _, uuid := range cs.Uuids {
+				delete(changesetsByUuid, uuid)
+			}
 		}
 	})
 	r = csv.NewReader(features)
@@ -128,14 +143,38 @@ func main() {
 				Change:  cs,
 				Issue:   structs.Issue{record[8][1:], "story"},
 				Feature: storiesMap[record[8][1:]]}
+			for _, uuid := range cs.Uuids {
+				delete(changesetsByUuid, uuid)
+			}
 		}
 	})
+	r = csv.NewReader(issues)
+	issuesMap := map[string]string{}
+	read(r, func(record []string) {
+		if record[1] == "1" {
+			issuesMap[record[0]] = "bug"
+		} else {
+			issuesMap[record[0]] = "story"
+		}
+	})
+	re, err := regexp.Compile("#\\d+")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for key, cs := range changesetsByUuid {
+		change := *cs
+		change.Uuids = []string{key}
+		commits[key] = &structs.Commit{Change: &change}
+		issueId := re.FindString(cs.Comment)
+		if issueId == "" {
+			commits[key].Issue = structs.Issue{issueId, issuesMap[issueId[1:]]}
+		}
+	}
 	result := make([]*structs.Commit, 0, len(commits))
 	for _, commit := range commits {
 		commit.Files = []string{}
 		for _, uuid := range commit.Change.Uuids {
-			cmd := exec.Command(
-				"lscm", "list", "changes", "-r", "siop", uuid, "-j")
+			cmd := exec.Command("lscm", "list", "changes", "-r", "siop", uuid, "-j")
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				log.Fatal(err, string(out))
