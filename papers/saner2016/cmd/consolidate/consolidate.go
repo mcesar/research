@@ -107,7 +107,7 @@ func main() {
 		c := changesets[key]
 		if c == nil {
 			//fmt.Println(dc)
-			fmt.Fprintf(os.Stderr, "Key not found: ", key)
+			fmt.Fprintf(os.Stderr, "Key not found: %v\n", key)
 		}
 		return c, key
 	}
@@ -118,6 +118,9 @@ func main() {
 		defectChangesets := strings.Split(record[4], "\n")
 		for _, dc := range defectChangesets {
 			cs, key := lookupChangeset(dc)
+			if cs == nil {
+				continue
+			}
 			commits[key] = &structs.Commit{
 				Change:  cs,
 				Issue:   structs.Issue{record[1], "bug"},
@@ -136,6 +139,9 @@ func main() {
 		defectChangesets := strings.Split(record[9], "\n")
 		for _, dc := range defectChangesets {
 			cs, key := lookupChangeset(dc)
+			if cs == nil {
+				continue
+			}
 			commits[key] = &structs.Commit{
 				Change:  cs,
 				Issue:   structs.Issue{record[8][1:], "story"},
