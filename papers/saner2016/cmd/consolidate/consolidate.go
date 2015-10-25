@@ -94,14 +94,6 @@ func main() {
 		comm := dc[strings.Index(dc, " - ")+3:]
 		comm = comm[:strings.LastIndex(comm, " - ")]
 		comm = comm[:strings.LastIndex(comm, " - ")]
-		/*
-			for i := 1; i < len(arr)-2; i++ {
-				if len(comm) > 0 {
-					comm += " - "
-				}
-				comm += arr[i]
-			}
-		*/
 		if len(comm) > 56 {
 			comm = comm[:56]
 		}
@@ -114,8 +106,8 @@ func main() {
 		key := strings.ToLower(fmt.Sprintf("%v - %v - %v", comm, author, time))
 		c := changesets[key]
 		if c == nil {
-			fmt.Println(dc)
-			log.Fatal("Key not found: ", key)
+			//fmt.Println(dc)
+			fmt.Fprintf(os.Stderr, "Key not found: ", key)
 		}
 		return c, key
 	}
