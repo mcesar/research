@@ -114,6 +114,7 @@ func main() {
 		key := strings.ToLower(fmt.Sprintf("%v - %v - %v", comm, author, time))
 		c := changesets[key]
 		if c == nil {
+			fmt.Println(dc)
 			log.Fatal("Key not found: ", key)
 		}
 		return c, key
