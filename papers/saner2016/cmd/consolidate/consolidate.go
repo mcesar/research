@@ -169,7 +169,7 @@ func main() {
 		change.Uuids = []string{key}
 		commits[key] = &structs.Commit{Change: &change}
 		issueId := re.FindString(cs.Comment)
-		if issueId == "" {
+		if issueId != "" {
 			commits[key].Issue = structs.Issue{issueId, issuesMap[issueId[1:]]}
 		}
 	}
