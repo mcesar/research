@@ -92,8 +92,8 @@ func main() {
 	}()
 	lookupChangeset := func(dc string) (*structs.Change, string) {
 		comm := dc[strings.Index(dc, " - ")+3:]
-		comm = comm[:strings.Index(dc, " - ")]
-		comm = comm[:strings.Index(dc, " - ")]
+		comm = comm[:strings.LastIndex(comm, " - ")]
+		comm = comm[:strings.LastIndex(comm, " - ")]
 		/*
 			for i := 1; i < len(arr)-2; i++ {
 				if len(comm) > 0 {
