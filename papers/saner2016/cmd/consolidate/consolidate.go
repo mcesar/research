@@ -91,20 +91,24 @@ func main() {
 		issues.Close()
 	}()
 	lookupChangeset := func(dc string) (*structs.Change, string) {
-		arr := strings.Split(dc, " - ")
-		comm := ""
-		for i := 1; i < len(arr)-2; i++ {
-			if len(comm) > 0 {
-				comm += " - "
+		comm := dc[strings.Index(dc, " - ")+3:]
+		comm = comm[:strings.Index(dc, " - ")-1]
+		comm = comm[:strings.Index(dc, " - ")-1]
+		/*
+			for i := 1; i < len(arr)-2; i++ {
+				if len(comm) > 0 {
+					comm += " - "
+				}
+				comm += arr[i]
 			}
-			comm += arr[i]
-		}
+		*/
 		if len(comm) > 56 {
 			comm = comm[:56]
 		}
 		if strings.ToLower(comm) == "<nenhum comentário>" {
 			comm = ""
 		}
+		arr := strings.Split(dc, " - ")
 		author := arr[len(arr)-2]
 		time := arr[len(arr)-1]
 		key := strings.ToLower(fmt.Sprintf("%v - %v - %v", comm, author, time))
