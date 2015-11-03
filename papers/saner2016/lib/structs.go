@@ -1,4 +1,6 @@
-package structs
+package lib
+
+import "time"
 
 type Issue struct {
 	Id, Kind string
@@ -16,12 +18,13 @@ type Changeset struct {
 }
 
 type Change struct {
-	Author   string `json:author`
-	Comment  string `json:comment`
-	Modified string `json:Modified`
-	Uuid     string `json:uuid`
-	Changes  []File `json:changes`
-	Uuids    []string
+	Author       string `json:author`
+	Comment      string `json:comment`
+	Modified     string `json:Modified`
+	ModifiedTime time.Time
+	Uuid         string `json:uuid`
+	Changes      []File `json:changes`
+	Uuids        []string
 }
 
 type File struct {
